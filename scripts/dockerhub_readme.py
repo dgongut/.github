@@ -53,6 +53,13 @@ def build(text: str, repo_url: str, lang: str = "es") -> str:
         flags=re.M,
     )
     text = re.sub(r"\]\(#", f"]({repo_url}#", text)
+    # A github.com/.../blob/... image is a web page outside GitHub; use the raw file
+    text = re.sub(
+        r"https://github\.com/([^/\s]+/[^/\s]+)/blob/([^\s)\"']+\.(?:png|jpe?g|gif|svg|webp))",
+        r"https://raw.githubusercontent.com/\1/\2",
+        text,
+        flags=re.I,
+    )
     return re.sub(r"\n{3,}", "\n\n", text).strip() + "\n"
 
 
