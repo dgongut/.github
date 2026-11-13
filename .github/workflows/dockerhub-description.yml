@@ -1,0 +1,65 @@
+name: Docker Hub description
+
+# Reusable workflow: publishes the caller's README, adapted by
+# scripts/dockerhub_readme.py, as the description of its image on Docker Hub.
+#
+# In the calling repo (.github/workflows/dockerhub-description.yml):
+#
+#   on:
+#     push:
+#       branches: [main]
+#       paths: [README.md, .github/workflows/dockerhub-description.yml]
+#     workflow_dispatch:
+#   jobs:
+#     sync:
+#       uses: dgongut/.github/.github/workflows/dockerhub-description.yml@main
+#       secrets: inherit
+#
+# The calling repo needs the DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets
+# (a Docker Hub access token with Read, Write, Delete).
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Docker Hub repository; defaults to the GitHub owner/name
+        type: string
+        default: ""
+      readme:
+        description: README to publish
+        type: string
+        default: README.md
+      language:
+        description: Language of the labels for GitHub alerts (es or en)
+        type: string
+        default: es
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: dgongut/.github
+          path: .shared-workflows
+
+      - name: Build Docker Hub description
+        run: >
+          python3 .shared-workflows/scripts/dockerhub_readme.py
+          "${{ inputs.readme }}" DOCKERHUB.md
+          "${{ github.server_url }}/${{ github.repository }}"
+          "${{ inputs.language }}"
+
+      - uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ inputs.image || github.repository }}
+          readme-filepath: ./DOCKERHUB.md
+          enable-url-completion: true
